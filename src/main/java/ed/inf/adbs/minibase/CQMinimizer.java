@@ -5,6 +5,9 @@ import ed.inf.adbs.minibase.base.Query;
 import ed.inf.adbs.minibase.base.RelationalAtom;
 import ed.inf.adbs.minibase.parser.QueryParser;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,8 +31,7 @@ public class CQMinimizer {
         String inputFile = args[0];
         String outputFile = args[1];
 
-//        minimizeCQ(inputFile, outputFile);
-
+        minimizeCQ(inputFile, outputFile);
         parsingExample(inputFile);
     }
 
@@ -43,8 +45,17 @@ public class CQMinimizer {
     public static void minimizeCQ(String inputFile, String outputFile) {
         try {
             Query query = QueryParser.parse(Paths.get(inputFile));
+
+            System.out.println("Entire query: " + query);
+            RelationalAtom head = query.getHead();
+            System.out.println("Head: " + head);
+            List<Atom> body = query.getBody();
+            System.out.println("Body: " + body);
+
+
             executeMinimizeCQBody(query);
             outputQueryToFile(query, outputFile);
+
 
         } catch (Exception e) {
             System.err.println("Exception occurred during parsing");
@@ -79,14 +90,11 @@ public class CQMinimizer {
             Atom atomToRemove = null;
             changeMade = false;
             for (Atom atom: query.getBody()) {
-                //  if there exists a query homomorphism from the OG query.getBody to query.getBody without atom
-                //      then changeMade = true;
-                //      don't add atom to newBody;
 
                 List<Atom> bodyWithoutAtom = new ArrayList<>(query.getBody());
                 bodyWithoutAtom.remove(atom);
-
                 if (validQueryHomomorphismFound(query.getBody(), bodyWithoutAtom, atom, query.getHead())) {
+
                     //  then update body to bodyWithoutAtom and continue to the next iteration of the doWhile loop
                     changeMade = true;
                     atomToRemove = atom;
@@ -103,8 +111,15 @@ public class CQMinimizer {
         } while(changeMade);
     }
 
-    public static void outputQueryToFile(Query outputQuery, String outputFile) {
-        //  TODO
+    public static void outputQueryToFile(Query outputQuery, String outputFileName) throws IOException {
+        File outFile = Paths.get(outputFileName).toFile();
+
+        if (outFile.createNewFile()) {
+            try (FileWriter writer = new FileWriter(outputFileName)) {
+                writer.write(outputQuery.toString());
+            }
+        }
+
     }
 
 

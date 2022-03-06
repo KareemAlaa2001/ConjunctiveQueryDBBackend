@@ -3,14 +3,13 @@ package ed.inf.adbs.minibase;
 import ed.inf.adbs.minibase.base.*;
 
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class Utils {
 
     public static String join(Collection<?> c, String delimiter) {
         return c.stream()
-                .map(x -> x.toString())
+                .map(Object::toString)
                 .collect(Collectors.joining(delimiter));
     }
 
@@ -25,8 +24,8 @@ public class Utils {
                 .collect(Collectors.toSet());
 
         List<Variable> variablesToMap = ((RelationalAtom) atomInQuestion).getTerms().stream()
-                .filter((term) -> isVariable(term) && !head.getTerms().contains(term))
-                .map((variable) -> (Variable) variable).collect(Collectors.toList());
+                .filter(Utils::isVariable)
+                .map(Variable.class::cast).filter(term -> !head.getTerms().contains(term)).collect(Collectors.toList());
 
         HashMap<Variable, Set<Term>> transformationsToAttempt = new HashMap<>();
 
@@ -41,13 +40,15 @@ public class Utils {
     }
 
     public static boolean backtrackThroughMappings(List<Atom> baseQuery, List<Atom> targetQuery, Map<Variable, Set<Term>> transformationsToAttempt) {
-        //  create a queue of accumulatorstate, remainingTransformations, attemptToMake
-        Set<Atom> targetQuerySet = new HashSet<>(targetQuery);
-        Set<Atom> baseQuerySet = new HashSet<>(baseQuery);
+
+        if (transformationsToAttempt.isEmpty()) return baseQuery.equals(targetQuery);
+
+        Set<RelationalAtom> targetQuerySet = targetQuery.stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
+        Set<RelationalAtom> baseQuerySet = baseQuery.stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
+
+        //  create a queue of accumulatorstat, remainingTransformations
         Queue<MappingQueueState> configurationQueue = new ArrayDeque<>();
         configurationQueue.add(new MappingQueueState(baseQuerySet, transformationsToAttempt));
-
-
 
         while (!configurationQueue.isEmpty()) {
             MappingQueueState currState = configurationQueue.remove();
@@ -55,22 +56,20 @@ public class Utils {
 
             currState.getRemainingTransformations().forEach(((variable, terms) -> {
 
-                List<Set<Atom>> validTransformationResults = terms.stream().map(term -> getHomomorphismMappingResult(variable, term, currState.getCurrentQuery())).collect(Collectors.toList());
+                List<Set<RelationalAtom>> validTransformationResults = terms.stream().map(term -> getHomomorphismMappingResult(variable, term, currState.getCurrentQuery())).collect(Collectors.toList());
                 Map<Variable, Set<Term>> remainingValidTransformations = new HashMap<>(currState.getRemainingTransformations());
 
                 remainingValidTransformations.remove(variable);
 
                 validTransformationResults.forEach(resQuery -> configurationQueue.add(new MappingQueueState(resQuery, remainingValidTransformations)));
-
             }));
         }
 
         return false;
     }
 
-    public static Set<Atom> getHomomorphismMappingResult(Variable baseVar, Term target, Set<Atom> baseQuery) {
-        return baseQuery.stream()
-                .map(RelationalAtom.class::cast).map(atom -> new RelationalAtom(atom.getName(), atom.getTerms().stream()
+    private static Set<RelationalAtom> getHomomorphismMappingResult(Variable baseVar, Term target, Set<RelationalAtom> baseQuery) {
+        return baseQuery.stream().map(atom -> new RelationalAtom(atom.getName(), atom.getTerms().stream()
                         .map(term -> (isVariable(term) && term.equals(baseVar)) ? target : term).collect(Collectors.toList()))).collect(Collectors.toSet());
     }
 
@@ -78,32 +77,29 @@ public class Utils {
         return term.getClass().equals(Variable.class);
     }
 
-
+    private Utils() {}
 }
 
 class MappingQueueState {
 
-    private Set<Atom> currentQuery;
-    private Map<Variable, Set<Term>> remainingTransformations;
+    private final Set<RelationalAtom> currentQuery;
+    private final Map<Variable, Set<Term>> remainingTransformations;
 
-    public MappingQueueState(Set<Atom> currentQuery, Map<Variable, Set<Term>> remainingTransformations) {
+    public MappingQueueState(Set<RelationalAtom> currentQuery, Map<Variable, Set<Term>> remainingTransformations) {
         this.currentQuery = currentQuery;
         this.remainingTransformations = remainingTransformations;
     }
 
-    public Set<Atom> getCurrentQuery() {
+    public Set<RelationalAtom> getCurrentQuery() {
         return currentQuery;
-    }
-
-    public void setCurrentQuery(Set<Atom> currentQuery) {
-        this.currentQuery = currentQuery;
     }
 
     public Map<Variable, Set<Term>> getRemainingTransformations() {
         return remainingTransformations;
     }
 
-    public void setRemainingTransformations(Map<Variable, Set<Term>> remainingTransformations) {
-        this.remainingTransformations = remainingTransformations;
+    @Override
+    public String toString() {
+        return currentQuery.toString() + remainingTransformations.toString();
     }
 }
