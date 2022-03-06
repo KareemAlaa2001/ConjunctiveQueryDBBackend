@@ -32,7 +32,8 @@ public class CQMinimizer {
         String outputFile = args[1];
 
         minimizeCQ(inputFile, outputFile);
-        parsingExample(inputFile);
+        //  TODO investigate why this doesnt work for example 3...
+//        parsingExample(inputFile);
     }
 
     /**
@@ -46,14 +47,11 @@ public class CQMinimizer {
         try {
             Query query = QueryParser.parse(Paths.get(inputFile));
 
-            System.out.println("Entire query: " + query);
-            RelationalAtom head = query.getHead();
-            System.out.println("Head: " + head);
-            List<Atom> body = query.getBody();
-            System.out.println("Body: " + body);
-
+            System.out.println("Input query: " + query);
 
             executeMinimizeCQBody(query);
+
+            System.out.println("Output query: " + query);
             outputQueryToFile(query, outputFile);
 
 
@@ -113,11 +111,10 @@ public class CQMinimizer {
 
     public static void outputQueryToFile(Query outputQuery, String outputFileName) throws IOException {
         File outFile = Paths.get(outputFileName).toFile();
+        outFile.createNewFile();
 
-        if (outFile.createNewFile()) {
-            try (FileWriter writer = new FileWriter(outputFileName)) {
-                writer.write(outputQuery.toString());
-            }
+        try (FileWriter writer = new FileWriter(outputFileName)) {
+            writer.write(outputQuery.toString());
         }
 
     }

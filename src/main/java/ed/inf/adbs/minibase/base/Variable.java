@@ -20,15 +20,9 @@ public class Variable extends Term {
 
     @Override
     public boolean equals(Object object) {
-        if (this == object) return true;
+        if (!super.equals(object)) return false;
 
-        if (object == null) return false;
-
-        if (getClass() != object.getClass()) return false;
-
-        Variable variable = (Variable) object;
-
-        return variable.getName().equals(this.getName());
+        return ((Variable) object).getName().equals(this.getName());
     }
 
     @Override

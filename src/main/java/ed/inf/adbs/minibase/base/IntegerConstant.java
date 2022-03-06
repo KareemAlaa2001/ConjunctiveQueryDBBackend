@@ -1,5 +1,7 @@
 package ed.inf.adbs.minibase.base;
 
+import java.util.Objects;
+
 public class IntegerConstant extends Constant {
     private Integer value;
 
@@ -14,5 +16,17 @@ public class IntegerConstant extends Constant {
     @Override
     public String toString() {
         return value.toString();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!super.equals(o)) return false;
+
+        else return ((IntegerConstant) o).getValue().equals(this.getValue());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.value);
     }
 }

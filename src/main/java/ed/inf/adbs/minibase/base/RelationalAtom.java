@@ -2,11 +2,8 @@ package ed.inf.adbs.minibase.base;
 
 import ed.inf.adbs.minibase.Utils;
 
-import javax.management.relation.Relation;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class RelationalAtom extends Atom {
     private String name;
