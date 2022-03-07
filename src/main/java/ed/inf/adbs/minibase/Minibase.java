@@ -5,6 +5,7 @@ import ed.inf.adbs.minibase.base.Query;
 import ed.inf.adbs.minibase.base.RelationalAtom;
 import ed.inf.adbs.minibase.parser.QueryParser;
 
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -25,12 +26,23 @@ public class Minibase {
         String inputFile = args[1];
         String outputFile = args[2];
 
-//        evaluateCQ(databaseDir, inputFile, outputFile);
+
+        evaluateCQ(databaseDir, inputFile, outputFile);
 
         parsingExample(inputFile);
     }
 
     public static void evaluateCQ(String databaseDir, String inputFile, String outputFile) {
+        try {
+            Query query = QueryParser.parse(Paths.get(inputFile));
+
+            //  TODO
+            //  first generate relevant artefacts from the databaseDir (so that the DB class representations are created)
+            //  then evaluate the query by constructing the tree and making relative calls as they come in...
+
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
         // TODO: add your implementation
     }
 
