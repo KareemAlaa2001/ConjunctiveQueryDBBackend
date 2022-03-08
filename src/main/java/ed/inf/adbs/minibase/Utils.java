@@ -26,7 +26,11 @@ public class Utils {
         try (FileWriter writer = new FileWriter(outputFileName)) {
             writer.write(outputQuery.toString());
         }
-
     }
-}
+
+    public static String parseDBSchema(String schemaFileName) {
+        //  TODO
+        return "";
+    }
+ }
 

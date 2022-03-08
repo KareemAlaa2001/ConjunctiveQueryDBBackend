@@ -3,11 +3,13 @@ package ed.inf.adbs.minibase;
 import ed.inf.adbs.minibase.base.Atom;
 import ed.inf.adbs.minibase.base.Query;
 import ed.inf.adbs.minibase.base.RelationalAtom;
+import ed.inf.adbs.minibase.dbstructures.Relation;
 import ed.inf.adbs.minibase.parser.QueryParser;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * In-memory database system
@@ -36,14 +38,24 @@ public class Minibase {
         try {
             Query query = QueryParser.parse(Paths.get(inputFile));
 
+            //  first implementing the construction of scn operators for each of the relations
+            List<RelationalAtom> relationalAtoms = query.getBody().stream()
+                    .filter(atom -> (atom instanceof RelationalAtom))
+                    .map(RelationalAtom.class::cast).collect(Collectors.toList());
             //  TODO
             //  first generate relevant artefacts from the databaseDir (so that the DB class representations are created)
+            //      the above will also involve parsing the database schema
             //  then evaluate the query by constructing the tree and making relative calls as they come in...
 
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
         // TODO: add your implementation
+    }
+
+
+    private static void constructArtefacts() {
+
     }
 
     /**

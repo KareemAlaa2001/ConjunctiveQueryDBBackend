@@ -37,7 +37,7 @@ public class MinimizationHelpers {
 
                 List<Atom> bodyWithoutAtom = new ArrayList<>(query.getBody());
                 bodyWithoutAtom.remove(atom);
-                if (validQueryHomomorphismFound(query.getBody(), bodyWithoutAtom, atom, query.getHead())) {
+                if (validQueryHomomorphismFound(query.getBody(), bodyWithoutAtom, (RelationalAtom) atom, query.getHead())) {
 
                     //  then update body to bodyWithoutAtom and continue to the next iteration of the doWhile loop
                     changeMade = true;
@@ -55,23 +55,23 @@ public class MinimizationHelpers {
         } while(changeMade);
     }
 
-    public static boolean validQueryHomomorphismFound(List<Atom> baseQuery, List<Atom> targetQuery, Atom atomInQuestion, RelationalAtom head) {
+    public static boolean validQueryHomomorphismFound(List<Atom> baseQuery, List<Atom> targetQuery, RelationalAtom atomInQuestion, RelationalAtom head) {
         //  idea is essentially: to result in the valid targetQuery, we're focusing on transforming just the variables in the atom.
         //  So we can recursively backtrack on the possible mappings we can do to the variables in the atom.
         //  Will need to apply a transformation to the entire query when completing the variable mapping.
 
-        Set<Term> validTransformationTargets = targetQuery.stream()
-                .flatMap((currAtom) -> ((RelationalAtom) currAtom)
-                        .getTerms().stream())
+        Set<Term> validTransformationTargets = targetQuery.stream().map(RelationalAtom.class::cast)
+                .filter(relationalAtom -> relationalAtom.getName().equals(atomInQuestion.getName()))
+                .flatMap(currAtom -> currAtom.getTerms().stream())
                 .collect(Collectors.toSet());
 
-        List<Variable> variablesToMap = ((RelationalAtom) atomInQuestion).getTerms().stream()
+        List<Variable> variablesToMap = atomInQuestion.getTerms().stream()
                 .filter(MinimizationHelpers::isVariable)
                 .map(Variable.class::cast).filter(term -> !head.getTerms().contains(term)).collect(Collectors.toList());
 
         HashMap<Variable, Set<Term>> transformationsToAttempt = new HashMap<>();
 
-        variablesToMap.forEach((var) ->
+        variablesToMap.forEach(var ->
                 transformationsToAttempt.put(var,
                         validTransformationTargets.stream()
                         .filter((term -> !term.equals(var)))

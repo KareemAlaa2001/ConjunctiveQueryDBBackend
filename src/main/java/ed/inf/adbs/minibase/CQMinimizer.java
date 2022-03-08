@@ -27,8 +27,6 @@ public class CQMinimizer {
         String outputFile = args[1];
 
         minimizeCQ(inputFile, outputFile);
-        //  TODO investigate why this doesnt work for example 3...
-//        parsingExample(inputFile);
     }
 
     /**
@@ -67,8 +65,6 @@ public class CQMinimizer {
 
         try {
             Query query = QueryParser.parse(Paths.get(filename));
-//            Query query = QueryParser.parse("Q(x, y) :- R(x, z), S(y, z, w)");
-//            Query query = QueryParser.parse("Q() :- R(x, 'z'), S(4, z, w)");
 
             System.out.println("Entire query: " + query);
             RelationalAtom head = query.getHead();
