@@ -23,6 +23,8 @@ public class ScanOperator extends Operator {
 
     @Override
     public Tuple getNextTuple() {
+
+
 //        try {
 //            String tupleLine = randomAccessFile.readLine();
 //

@@ -71,51 +71,83 @@ public class MinimizationHelpers {
 
         HashMap<Variable, Set<Term>> transformationsToAttempt = new HashMap<>();
 
-        variablesToMap.forEach(var ->
-                transformationsToAttempt.put(var,
+        variablesToMap.forEach(variable ->
+                transformationsToAttempt.put(variable,
                         validTransformationTargets.stream()
-                        .filter((term -> !term.equals(var)))
+                        .filter((term -> !term.equals(variable)))
                         .collect(Collectors.toSet())));
 
-        //  we have a bunch of valid possible transformations now, we need to backtrack through these and either find a valid result or return nothing found...
-        return backtrackThroughMappings(baseQuery, targetQuery, transformationsToAttempt);
-    }
-
-    public static boolean backtrackThroughMappings(List<Atom> baseQuery, List<Atom> targetQuery, Map<Variable, Set<Term>> transformationsToAttempt) {
-
-        if (transformationsToAttempt.isEmpty()) return baseQuery.equals(targetQuery);
-
-        Set<RelationalAtom> targetQuerySet = targetQuery.stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
         Set<RelationalAtom> baseQuerySet = baseQuery.stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
+        Set<RelationalAtom> targetQuerySet = targetQuery.stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
 
-        //  create a queue of accumulatorstat, remainingTransformations
-        Queue<MappingQueueState> configurationQueue = new ArrayDeque<>();
-        configurationQueue.add(new MappingQueueState(baseQuerySet, transformationsToAttempt));
-
-        while (!configurationQueue.isEmpty()) {
-            MappingQueueState currState = configurationQueue.remove();
-            if (currState.getCurrentQuery().equals(targetQuerySet)) return true;
-
-            currState.getRemainingTransformations().forEach(((variable, terms) -> {
-
-                List<Set<RelationalAtom>> validTransformationResults = terms.stream().map(term -> getHomomorphismMappingResult(variable, term, currState.getCurrentQuery())).collect(Collectors.toList());
-                Map<Variable, Set<Term>> remainingValidTransformations = new HashMap<>(currState.getRemainingTransformations());
-
-                remainingValidTransformations.remove(variable);
-
-                validTransformationResults.forEach(resQuery -> configurationQueue.add(new MappingQueueState(resQuery, remainingValidTransformations)));
-            }));
-        }
-
-        return false;
+        //  we have a bunch of valid possible transformations now, we need to backtrack through these and either find a valid result or return nothing found...
+        return alternativeBacktrack(baseQuerySet, targetQuerySet, transformationsToAttempt);
     }
 
-    private static Set<RelationalAtom> getHomomorphismMappingResult(Variable baseVar, Term target, Set<RelationalAtom> baseQuery) {
+
+    public static boolean alternativeBacktrack(Set<RelationalAtom> baseQuery, Set<RelationalAtom> targetQuery, Map<Variable, Set<Term>> transformationsToAttempt) {
+        if (queryBodiesEquivalent(baseQuery, targetQuery)) return true;
+
+        if (transformationsToAttempt.isEmpty()) return false;
+
+        List<MappingQueueState> nextStatesToTry = new ArrayList<>();
+
+
+        transformationsToAttempt.forEach(((variable, terms) -> {
+            Map<Variable, Set<Term>> remainingWithoutVariable = new HashMap<>(transformationsToAttempt);
+            remainingWithoutVariable.remove(variable);
+
+            terms.forEach(term -> nextStatesToTry.add(new MappingQueueState(getHomomorphismMappingResult(variable, term, baseQuery), remainingWithoutVariable)));
+        }));
+
+        return nextStatesToTry.stream().anyMatch(state -> alternativeBacktrack(state.getCurrentQuery(), targetQuery, state.getRemainingTransformations()));
+    }
+
+
+    public static Set<RelationalAtom> getHomomorphismMappingResult(Variable baseVar, Term target, Set<RelationalAtom> baseQuery) {
         return baseQuery.stream().map(atom -> new RelationalAtom(atom.getName(), atom.getTerms().stream()
                         .map(term -> (isVariable(term) && term.equals(baseVar)) ? target : term).collect(Collectors.toList()))).collect(Collectors.toSet());
     }
 
     public static boolean isVariable(Term term) {
         return term.getClass().equals(Variable.class);
+    }
+
+    public static boolean queryBodiesEquivalent(Set<RelationalAtom> firstQuerySet, Set<RelationalAtom> secondQuerySet) {
+        if (firstQuerySet.size() != secondQuerySet.size()) return false;
+        List<RelationalAtom> firstQueryList = new ArrayList<>(firstQuerySet);
+        List<RelationalAtom> secondQueryList = new ArrayList<>(secondQuerySet);
+
+        firstQueryList.sort(Comparator.comparing(RelationalAtom::hashCode));
+        secondQueryList.sort(Comparator.comparing(RelationalAtom::hashCode));
+
+        for (int i = 0; i < firstQueryList.size(); i++ ) {
+            RelationalAtom firstAtom = firstQueryList.get(i);
+            RelationalAtom secondAtom = secondQueryList.get(i);
+
+            if (!relationalAtomsEquivalent(firstAtom, secondAtom)) {
+                if (firstAtom.getName().equals(secondAtom.getName()))
+//                    System.err.println("atoms " + firstAtom + " and " + secondAtom + " not equivalent!");
+                return false;
+            }
+        }
+        System.err.println("found matching queries!\n" +  firstQuerySet + "\nAnd\n" + secondQuerySet);
+        return true;
+    }
+
+    public static boolean relationalAtomsEquivalent(RelationalAtom firstAtom, RelationalAtom secondAtom) {
+        if ((!firstAtom.getName().equals(secondAtom.getName())) || (firstAtom.getTerms().size() != secondAtom.getTerms().size())) return false;
+
+        for (int j = 0; j < firstAtom.getTerms().size(); j++) {
+            if (!termsEquivalent(firstAtom.getTerms().get(j),secondAtom.getTerms().get(j))) return false;
+        }
+
+        return true;
+    }
+
+    private static boolean termsEquivalent(Term firstTerm, Term secondTerm) {
+        if (!firstTerm.getClass().equals(secondTerm.getClass())) return false;
+
+        return firstTerm.equals(secondTerm);
     }
 }

@@ -1,6 +1,5 @@
 package ed.inf.adbs.minibase.dbstructures;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -9,27 +8,34 @@ import java.util.Map;
  */
 public class DatabaseCatalog {
 
-    //  TODO manage way around Relation vs Schema
-    private Map<Relation, String> fileMappings;
-
-    public static DatabaseCatalog catalog = new DatabaseCatalog();
-
-    private DatabaseCatalog() {}
+    public static DatabaseCatalog catalog = null;
 
     public DatabaseCatalog getCatalog() {
+        if (catalog != null) return catalog;
+        catalog = new DatabaseCatalog();
         return catalog;
     }
 
-    public Map<Relation, String> getFileMappings() {
-        return fileMappings;
+    private Map<String, Relation> relationMap;
+
+    public Map<String, Relation> getRelationMap() {
+        return relationMap;
     }
 
-    public void setFileMappings(Map<Relation, String> fileMappings) {
-        this.fileMappings = fileMappings;
+    public void setRelationMap(Map<String, Relation> relationMap) {
+        this.relationMap = relationMap;
     }
 
     //  TODO is this even necessary?
     public Schema getRelationSchema(Relation relation) {
         return relation.getSchema();
+    }
+
+    public void initialiseIfNotPresent(String relName) {
+        if (!this.getRelationMap().containsKey(relName)) initialiseRelation(relName);
+    }
+
+    private void initialiseRelation(String relName) {
+//        Relation relation = new Relation();
     }
 }
