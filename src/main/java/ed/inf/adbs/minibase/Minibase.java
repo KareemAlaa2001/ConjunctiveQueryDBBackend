@@ -8,8 +8,10 @@ import ed.inf.adbs.minibase.dbstructures.Relation;
 import ed.inf.adbs.minibase.parser.QueryParser;
 
 import javax.xml.crypto.Data;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,10 +44,12 @@ public class Minibase {
 
             //  first implementing the construction of scn operators for each of the relations
             List<RelationalAtom> relationalAtoms = query.getBody().stream()
-                    .filter(atom -> (atom instanceof RelationalAtom))
+                    .filter(RelationalAtom.class::isInstance)
                     .map(RelationalAtom.class::cast).collect(Collectors.toList());
 
-            constructRelations(relationalAtoms, databaseDir);
+            DatabaseCatalog catalog = DatabaseCatalog.getCatalog();
+
+            catalog.constructRelations(relationalAtoms, databaseDir);
 
 
 
@@ -57,21 +61,17 @@ public class Minibase {
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
-        // TODO: add your implementation
-    }
-
-    private static void constructRelations(List<RelationalAtom> relationalAtoms, String databaseDir) {
-//        relationalAtoms.forEach(relationalAtom -> constructScan(relationalAtom.getName()));
     }
 
 
-    private static void constructScan(String relationName, String databaseDir) {
 
-    }
-
-    private static void constructArtefacts() {
-
-    }
+//    private static void constructScan(String relationName, String databaseDir) {
+//
+//    }
+//
+//    private static void constructArtefacts() {
+//
+//    }
 
     /**
      * Example method for getting started with the parser.
