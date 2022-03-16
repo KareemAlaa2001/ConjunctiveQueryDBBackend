@@ -30,11 +30,7 @@ public class RelationalAtom extends Atom {
 
     @Override
     public boolean equals(Object object) {
-        if (this == object) return true;
-
-        if (object == null) return false;
-
-        if (getClass() != object.getClass()) return false;
+        if (!super.equals(object)) return false;
 
         RelationalAtom relationalAtom = (RelationalAtom) object;
 

@@ -1,4 +1,6 @@
 package ed.inf.adbs.minibase.base;
 
-public class Constant extends Term {
+
+public abstract class Constant extends Term {
+
 }

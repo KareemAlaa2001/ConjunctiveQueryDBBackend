@@ -2,6 +2,7 @@ package ed.inf.adbs.minibase.base;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
+import java.util.function.Function;
 
 public enum ComparisonOperator {
     EQ("="),

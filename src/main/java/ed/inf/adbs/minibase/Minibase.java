@@ -1,17 +1,15 @@
 package ed.inf.adbs.minibase;
 
-import ed.inf.adbs.minibase.base.Atom;
-import ed.inf.adbs.minibase.base.Query;
-import ed.inf.adbs.minibase.base.RelationalAtom;
+import ed.inf.adbs.minibase.base.*;
 import ed.inf.adbs.minibase.dbstructures.DatabaseCatalog;
-import ed.inf.adbs.minibase.dbstructures.Relation;
+import ed.inf.adbs.minibase.evaluator.Operator;
+import ed.inf.adbs.minibase.evaluator.ScanOperator;
 import ed.inf.adbs.minibase.parser.QueryParser;
 
-import javax.xml.crypto.Data;
-import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,8 +47,16 @@ public class Minibase {
 
             DatabaseCatalog catalog = DatabaseCatalog.getCatalog();
 
-            catalog.constructRelations(relationalAtoms, databaseDir);
+            catalog.constructRelations(databaseDir);
 
+            List<Operator> scanOperators = constructScans(relationalAtoms, catalog);
+
+            List<ComparisonAtom> comparisonAtoms = query.getBody().stream()
+                    .filter(ComparisonAtom.class::isInstance)
+                    .map(ComparisonAtom.class::cast).collect(Collectors.toList());
+
+
+//            scanOperators.forEach(Operator::dump);
 
 
             //  TODO
@@ -65,9 +71,18 @@ public class Minibase {
 
 
 
-//    private static void constructScan(String relationName, String databaseDir) {
-//
-//    }
+    private static List<Operator> constructScans(List<RelationalAtom> relationalAtoms, DatabaseCatalog catalog) {
+        return relationalAtoms.stream()
+                .map(relationalAtom -> {
+                    try {
+                        return new ScanOperator(catalog.getRelationMap().get(relationalAtom.getName()).getFileLocation(),catalog.getRelationMap().get(relationalAtom.getName()).getSchema());
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
 //
 //    private static void constructArtefacts() {
 //
