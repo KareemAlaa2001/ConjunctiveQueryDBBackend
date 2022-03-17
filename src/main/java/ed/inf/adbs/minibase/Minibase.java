@@ -3,7 +3,9 @@ package ed.inf.adbs.minibase;
 import ed.inf.adbs.minibase.base.*;
 import ed.inf.adbs.minibase.dbstructures.DatabaseCatalog;
 import ed.inf.adbs.minibase.evaluator.Operator;
+import ed.inf.adbs.minibase.evaluator.ProjectOperator;
 import ed.inf.adbs.minibase.evaluator.ScanOperator;
+import ed.inf.adbs.minibase.evaluator.SelectOperator;
 import ed.inf.adbs.minibase.parser.QueryParser;
 
 import java.io.FileNotFoundException;
@@ -56,13 +58,24 @@ public class Minibase {
                     .map(ComparisonAtom.class::cast).collect(Collectors.toList());
 
 
-//            scanOperators.forEach(Operator::dump);
+            // starting with a naive select-scan which sets up a scan for each relationalAtom, then sets a selection operator as a parent for each, calling the selection dump
+            List<SelectOperator> selectOperators = scanOperators.stream()
+                    .map(ScanOperator.class::cast)
+                    .map(scanOperator -> new SelectOperator(scanOperator, scanOperator.getBaseRelationalAtom(), comparisonAtoms.stream()
+                            .filter(comparisonAtom -> SelectOperator.relationalAtomContainsPredicateVariables(scanOperator.getBaseRelationalAtom(),comparisonAtom))
+                            .collect(Collectors.toList())))
+                    .collect(Collectors.toList());
+
+            List<ProjectOperator> projectOperators = selectOperators.stream()
+                    .map(selectOperator -> new ProjectOperator(selectOperator, query.getHead().getTerms().stream()
+                            .map(Variable.class::cast)
+                            .collect(Collectors.toList())
+                            , selectOperator.getRelationalAtom()))
+                    .collect(Collectors.toList());
+
+            projectOperators.forEach(ProjectOperator::dump);
 
 
-            //  TODO
-            //  first generate relevant artefacts from the databaseDir (so that the DB class representations are created)
-            //      the above will also involve parsing the database schema
-            //  then evaluate the query by constructing the tree and making relative calls as they come in...
 
         } catch (IOException ioe) {
             ioe.printStackTrace();
@@ -75,7 +88,7 @@ public class Minibase {
         return relationalAtoms.stream()
                 .map(relationalAtom -> {
                     try {
-                        return new ScanOperator(catalog.getRelationMap().get(relationalAtom.getName()).getFileLocation(),catalog.getRelationMap().get(relationalAtom.getName()).getSchema());
+                        return new ScanOperator(catalog.getRelationMap().get(relationalAtom.getName()).getFileLocation(),catalog.getRelationMap().get(relationalAtom.getName()).getSchema(), relationalAtom);
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                         return null;

@@ -14,6 +14,7 @@ public class SelectOperatorTests {
     private final Variable variablex = new Variable("x");
     private final Variable variabley = new Variable("y");
     private final Variable variablez = new Variable("z");
+    private final Variable variablef = new Variable("f");
 
     private final Constant stringConstantX1 = new StringConstant("X");
     private final Constant stringConstantX2 = new StringConstant("X");
@@ -26,6 +27,7 @@ public class SelectOperatorTests {
 
     private final ComparisonAtom xLTy = new ComparisonAtom(variablex, variabley, ComparisonOperator.LT);
     private final ComparisonAtom xGTy = new ComparisonAtom(variablex, variabley, ComparisonOperator.GT);
+    private final ComparisonAtom fGTy = new ComparisonAtom(variablef, variabley, ComparisonOperator.GT);
     private final ComparisonAtom xLT420 = new ComparisonAtom(variablex, integerConstant420, ComparisonOperator.LT);
     private final ComparisonAtom integer69LT420 = new ComparisonAtom(integerConstant69TheFirst, integerConstant420, ComparisonOperator.LT);
 
@@ -49,7 +51,7 @@ public class SelectOperatorTests {
     @Test
     public void test_getVariableSubstitutionInTuple_substitutesCorrectly() {
 
-        assertEquals(integerConstant69TheFirst, SelectOperator.getVariableSubstitutionInTuple(relationalAtom, testTuple, variablexCopy));
+        assertEquals(integerConstant69TheFirst, EvaluationUtils.getVariableSubstitutionInTuple(relationalAtom, testTuple, variablexCopy));
 
     }
 
@@ -71,5 +73,10 @@ public class SelectOperatorTests {
     @Test
     public void test_passesPredicate_case2WithVariablesToSub() {
         assertFalse(SelectOperator.passesPredicate(testTuple, xGTy, relationalAtom));
+    }
+
+    @Test
+    public void test_predicateContainsValueNotInRelationalAtom() {
+        assertThrows(UnsupportedOperationException.class,() -> SelectOperator.passesPredicate(testTuple, fGTy, relationalAtom));
     }
 }

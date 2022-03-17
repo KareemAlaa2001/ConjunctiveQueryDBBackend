@@ -24,6 +24,7 @@ public class CQMinimizerTests {
 
         File inputFolder = new File(basePath + input);
         File[] inputFiles = inputFolder.listFiles();
+
         for (File inputFile: inputFiles) {
             String queryFilename = inputFile.getName();
             System.out.println(queryFilename);

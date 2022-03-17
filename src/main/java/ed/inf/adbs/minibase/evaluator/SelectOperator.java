@@ -10,34 +10,39 @@ import java.io.IOException;
 import java.util.List;
 
 public class SelectOperator extends Operator {
-    Operator child;
-    RelationalAtom childAtom;
 
-    public SelectOperator(Operator child, RelationalAtom childAtom) {
+    private Operator child;
+    private RelationalAtom relationalAtom;
+    private List<ComparisonAtom> selectionPredicates;
+
+    public SelectOperator(Operator child, RelationalAtom relationalAtom, List<ComparisonAtom> selectionPredicates) {
         this.child = child;
-        this.childAtom = childAtom;
+        this.relationalAtom = relationalAtom;
+        this.selectionPredicates = selectionPredicates;
     }
 
     @Override
     public Tuple getNextTuple() throws IOException {
-//        Tuple nextTuple = null;
-//        Tuple tupleInQuestion = null;
-//
-//        while ((tupleInQuestion  = child.getNextTuple()) != null && tupleInQuestion) {
-//
-//        }
-//
-//        return nextTuple;
+
+        //  TODO incorporate support for a relationalatom containing a constant (adding the equality selection predicate for an intermediate variable in its place
+        if (this.relationalAtom.getTerms().stream().anyMatch(Constant.class::isInstance)) throw new UnsupportedOperationException("Can't support constatns embedded in selection relational atoms yet!");
+
+        Tuple nextTuple = null;
+        Tuple tupleInQuestion;
+
+        while ((tupleInQuestion  = child.getNextTuple()) != null) {
+            if (passesSelectionPredicates(tupleInQuestion, this.selectionPredicates ,this.relationalAtom)) {
+                nextTuple = tupleInQuestion;
+                break;
+            }
+        }
+
+        return nextTuple;
     }
 
     @Override
     public void reset() {
-
-    }
-
-    @Override
-    public void dump() {
-
+        child.reset();
     }
 
     public static boolean passesSelectionPredicates(Tuple tuple, List<ComparisonAtom> comparisonAtomList, RelationalAtom sourceAtom) {
@@ -51,9 +56,16 @@ public class SelectOperator extends Operator {
         //  to check if the comparisonAtom predicate is passed, we need to extract the relevant constant for each variable in the relational atom.
         //  We can then use the new form of the comparison atom to evaluate whether the predicate is true
 
-        ComparisonAtom variablesSubstituted = substituteVariablesForTupleConstants(tuple, comparisonAtom, sourceAtom);
+        if (relationalAtomContainsPredicateVariables(sourceAtom, comparisonAtom)) {
+            ComparisonAtom variablesSubstituted = substituteVariablesForTupleConstants(tuple, comparisonAtom, sourceAtom);
 
-        return variablesSubstituted.evaluateComparison();
+            return variablesSubstituted.evaluateComparison();
+        }
+
+        else {
+            //  TODO either integrate support for "ignoring" irrelevant conditions and returning true (bad idea) OR keep this exception and just filter out at a higher level.
+            throw new UnsupportedOperationException("Still haven't decided what to do with queries with complex predicates outside the scope of the base relationalatom!");
+        }
     }
 
     public static ComparisonAtom substituteVariablesForTupleConstants(Tuple tuple, ComparisonAtom baseComparisonAtom, RelationalAtom sourceAtom) {
@@ -62,13 +74,13 @@ public class SelectOperator extends Operator {
         Constant term2Sub = null;
 
         if (baseComparisonAtom.getTerm1() instanceof Variable) {
-            term1Sub = getVariableSubstitutionInTuple(sourceAtom, tuple, (Variable) baseComparisonAtom.getTerm1());
+            term1Sub = EvaluationUtils.getVariableSubstitutionInTuple(sourceAtom, tuple, (Variable) baseComparisonAtom.getTerm1());
         } else {
             term1Sub = (Constant) baseComparisonAtom.getTerm1();
         }
 
         if (baseComparisonAtom.getTerm2() instanceof Variable) {
-            term2Sub = getVariableSubstitutionInTuple(sourceAtom, tuple, (Variable) baseComparisonAtom.getTerm2());
+            term2Sub = EvaluationUtils.getVariableSubstitutionInTuple(sourceAtom, tuple, (Variable) baseComparisonAtom.getTerm2());
         } else {
             term2Sub = (Constant) baseComparisonAtom.getTerm2();
         }
@@ -76,9 +88,33 @@ public class SelectOperator extends Operator {
         return new ComparisonAtom(term1Sub, term2Sub, baseComparisonAtom.getOp());
     }
 
-    public static Constant getVariableSubstitutionInTuple(RelationalAtom sourceAtom, Tuple tuple, Variable variable) {
-        int index = sourceAtom.getTerms().indexOf(variable);
-        return tuple.getFields().get(index);
+    public static boolean relationalAtomContainsPredicateVariables(RelationalAtom relationalAtom, ComparisonAtom comparisonAtom) {
+        if (comparisonAtom.getTerm1() instanceof Variable && !relationalAtom.getTerms().contains(comparisonAtom.getTerm1())) return false;
+        else if (comparisonAtom.getTerm2() instanceof Variable && !relationalAtom.getTerms().contains(comparisonAtom.getTerm2())) return false;
+        else return true;
     }
 
+    public Operator getChild() {
+        return child;
+    }
+
+    public void setChild(Operator child) {
+        this.child = child;
+    }
+
+    public RelationalAtom getRelationalAtom() {
+        return relationalAtom;
+    }
+
+    public void setRelationalAtom(RelationalAtom relationalAtom) {
+        this.relationalAtom = relationalAtom;
+    }
+
+    public List<ComparisonAtom> getSelectionPredicates() {
+        return selectionPredicates;
+    }
+
+    public void setSelectionPredicates(List<ComparisonAtom> selectionPredicates) {
+        this.selectionPredicates = selectionPredicates;
+    }
 }

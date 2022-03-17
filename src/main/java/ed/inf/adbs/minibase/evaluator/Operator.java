@@ -10,5 +10,14 @@ public abstract class Operator {
 
     public abstract void reset();
 
-    public abstract void dump();
+    public void dump() {
+        Tuple nextTuple;
+        try {
+            while ((nextTuple = getNextTuple()) != null) {
+                System.out.println(nextTuple);
+            }
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+    }
 }

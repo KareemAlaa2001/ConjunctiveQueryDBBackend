@@ -1,6 +1,7 @@
 package ed.inf.adbs.minibase.evaluator;
 
 import ed.inf.adbs.minibase.base.Constant;
+import ed.inf.adbs.minibase.base.RelationalAtom;
 import ed.inf.adbs.minibase.dbstructures.Schema;
 import ed.inf.adbs.minibase.dbstructures.Tuple;
 
@@ -18,12 +19,14 @@ public class ScanOperator extends Operator {
     BufferedReader bufferedReader;
     String fileName;
     Schema schema;
+    RelationalAtom baseRelationalAtom;
 
-    public ScanOperator(String fileName, Schema schema) throws FileNotFoundException {
+    public ScanOperator(String fileName, Schema schema, RelationalAtom baseRelationalAtom) throws FileNotFoundException {
         if (!dbFileValid(fileName,schema)) throw new IllegalArgumentException("Illegal dbfile passed in!");
         this.bufferedReader = new BufferedReader(new FileReader(fileName));
         this.schema = schema;
         this.fileName = fileName;
+        this.baseRelationalAtom = baseRelationalAtom;
     }
 
     @Override
@@ -48,10 +51,10 @@ public class ScanOperator extends Operator {
 
     @Override
     public void dump() {
-        String currLine;
+        Tuple nextTuple;
         try {
-            while ((currLine = bufferedReader.readLine()) != null) {
-                System.out.println(currLine);
+            while ((nextTuple = getNextTuple()) != null) {
+                System.out.println(nextTuple);
             }
         } catch (IOException ioe) {
             ioe.printStackTrace();
@@ -67,7 +70,7 @@ public class ScanOperator extends Operator {
                 .mapToObj(i -> {
                     try {
                         Constructor<? extends Constant> constructor = this.schema.getDataTypes().get(i).getDeclaredConstructor(String.class);
-                        return constructor.newInstance(cells[i]);
+                        return constructor.newInstance(cells[i].trim().replaceAll("'", ""));
                     } catch (NoSuchMethodException | InstantiationException | InvocationTargetException | IllegalAccessException e) {
                         e.printStackTrace();
                         throw new RuntimeException("Something has gone wrong in the method invocation!");
@@ -82,5 +85,37 @@ public class ScanOperator extends Operator {
         String extension =  dbFile.getName().substring(dotIndex+1);
         String relName =  dbFile.getName().substring(0,dotIndex);
         return (dbFile.isFile() && extension.equals("csv") && relName.equals(schema.getName()) && dbFile.getParentFile().getName().equals("files"));
+    }
+
+    public BufferedReader getBufferedReader() {
+        return bufferedReader;
+    }
+
+    public void setBufferedReader(BufferedReader bufferedReader) {
+        this.bufferedReader = bufferedReader;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public Schema getSchema() {
+        return schema;
+    }
+
+    public void setSchema(Schema schema) {
+        this.schema = schema;
+    }
+
+    public RelationalAtom getBaseRelationalAtom() {
+        return baseRelationalAtom;
+    }
+
+    public void setBaseRelationalAtom(RelationalAtom baseRelationalAtom) {
+        this.baseRelationalAtom = baseRelationalAtom;
     }
 }

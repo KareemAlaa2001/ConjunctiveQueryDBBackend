@@ -18,9 +18,4 @@ public class JoinOperator extends Operator {
     public void reset() {
 
     }
-
-    @Override
-    public void dump() {
-
-    }
 }
