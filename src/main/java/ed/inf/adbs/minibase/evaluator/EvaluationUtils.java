@@ -4,10 +4,12 @@ import ed.inf.adbs.minibase.base.*;
 import ed.inf.adbs.minibase.dbstructures.Tuple;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class EvaluationUtils {
     public static Constant getVariableSubstitutionInTuple(RelationalAtom sourceAtom, Tuple tuple, Variable variable) {
@@ -55,6 +57,7 @@ public class EvaluationUtils {
                 }).collect(Collectors.toList());
 
         bodyWithoutNewComparisonAtoms.addAll(comparisonAtomsToAdd);
+        bodyWithoutNewComparisonAtoms.addAll(inputQuery.getBody().stream().filter(ComparisonAtom.class::isInstance).collect(Collectors.toList()));
 
         return new Query(inputQuery.getHead(), bodyWithoutNewComparisonAtoms);
     }
