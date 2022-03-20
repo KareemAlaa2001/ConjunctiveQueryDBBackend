@@ -4,14 +4,34 @@ import ed.inf.adbs.minibase.base.*;
 import ed.inf.adbs.minibase.dbstructures.Tuple;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 public class EvaluationUtils {
+
+    public static List<Constant> getSubsForAllInstancesOfVariableInCombinedTuple(List<RelationalAtom> leftChildAtoms, Tuple combinedTuple, Variable variable) {
+        if (leftChildAtoms.stream().map(RelationalAtom::getTerms).map(List::size).reduce(0, Integer::sum) != combinedTuple.getFields().size())
+            throw new IllegalArgumentException("The left child atoms list should have a term size sum equivalent to the number of fields in the combined tuple!");
+
+        int offset = 0;
+
+        List<Constant> relevantConstants = new ArrayList<>();
+
+        for (RelationalAtom sourceAtom: leftChildAtoms) {
+            int index = sourceAtom.getTerms().indexOf(variable);
+
+            if (index >= 0) {
+                relevantConstants.add(combinedTuple.getFields().get(index + offset));
+            }
+
+            offset += sourceAtom.getTerms().size();
+        }
+
+        return relevantConstants;
+    }
+
     public static Constant getVariableSubstitutionInTuple(RelationalAtom sourceAtom, Tuple tuple, Variable variable) {
         int index = sourceAtom.getTerms().indexOf(variable);
         if (index >= 0)

@@ -3,14 +3,12 @@ package ed.inf.adbs.minibase.evaluator;
 import ed.inf.adbs.minibase.base.*;
 import ed.inf.adbs.minibase.dbstructures.DatabaseCatalog;
 import ed.inf.adbs.minibase.parser.QueryParser;
-import org.graalvm.compiler.api.replacements.Snippet;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class QueryPlanner {
     Operator root;
@@ -33,14 +31,54 @@ public class QueryPlanner {
                 .filter(RelationalAtom.class::isInstance)
                 .map(RelationalAtom.class::cast).collect(Collectors.toList());
 
-        List<Operator> scanOperators = constructScans(relationalAtoms); //  have now formed the leaves of the query tree
+        List<ScanOperator> scanOperators = constructScans(relationalAtoms); //  have now formed the leaves of the query tree
 
-        Map<Operator, List<List<Operator>>> selectionOperatorChildren = query.getBody().stream()
+        List<ComparisonAtom> comparisonAtoms = query.getBody().stream()
                 .filter(ComparisonAtom.class::isInstance)
-                .map(ComparisonAtom.class::cast)
-                .map(comparisonAtom -> (comparisonAtom, getRelevantScanOperators(comparisonAtom, scanOperators)))
+                .map(ComparisonAtom.class::cast).collect(Collectors.toList());
+
+        List<ComparisonAtom> nonJoinComparisonAtoms = comparisonAtoms.stream().filter(comparisonAtom -> isSingleAtomSelection(comparisonAtom, scanOperators)).collect(Collectors.toList());
+
+        Map<ScanOperator, List<ComparisonAtom>> singleAtomSelectionPredicates = new HashMap<>();
+
+        nonJoinComparisonAtoms.forEach(comparisonAtom -> {
+            Set<ScanOperator> relationalAtomSet = getRelevantScanOperators(comparisonAtom, scanOperators);
+            relationalAtomSet.forEach(scanOperator -> {
+                if ((singleAtomSelectionPredicates.containsKey(scanOperator))) {
+                    singleAtomSelectionPredicates.get(scanOperator).add(comparisonAtom);
+                } else {
+                    singleAtomSelectionPredicates.put(scanOperator, new ArrayList<ComparisonAtom>() {{
+                        add(comparisonAtom);
+                    }});
+                }
+            });
+        });
+
+        List<Operator> childrenOfJoins = scanOperators.stream()
+                .map(scanOperator -> (singleAtomSelectionPredicates.containsKey(scanOperator)) ?
+                        new SelectOperator(scanOperator, scanOperator.getBaseRelationalAtom(), singleAtomSelectionPredicates.get(scanOperator))
+                        : scanOperator)
+                .collect(Collectors.toList());
+
+        //  next step is to construct a join tree using these. need to identify where join conditions lie and organise them accordingly
+        //  can assume that maybe the variables with the same name in the expression have been remapped and extracted to relevant copies? nah that's dumb.
+
+        List<ComparisonAtom> joinConditions = comparisonAtoms.stream().filter(comparisonAtom -> !isSingleAtomSelection(comparisonAtom, scanOperators)).collect(Collectors.toList());
+
+
+
     }
 
+    public static Set<ScanOperator> getRelevantScanOperators(ComparisonAtom comparisonAtom, List<ScanOperator> scanOperators) {
+        if (!isSingleAtomSelection(comparisonAtom, scanOperators)) throw new IllegalArgumentException("This method is only callable for comparison atoms which are not join conditions!");
+
+        return scanOperators.stream()
+                .filter(scanOperator ->
+                        (scanOperator.getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm1()) && comparisonAtom.getTerm1() instanceof Variable)
+                                ||
+                                (scanOperator.getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm2()) && comparisonAtom.getTerm2() instanceof Variable))
+                .collect(Collectors.toSet());
+    }
 
     //  TODO refactor this to construct a tree with one root operator (projection if present) and form the selection positions for the joins
     public static void evaluateCQ(String databaseDir, String inputFile, String outputFile) {
@@ -60,7 +98,7 @@ public class QueryPlanner {
 
             catalog.constructRelations(databaseDir);
 
-            List<Operator> scanOperators = constructScans(relationalAtoms);
+            List<ScanOperator> scanOperators = constructScans(relationalAtoms);
 
             List<ComparisonAtom> comparisonAtoms = query.getBody().stream()
                     .filter(ComparisonAtom.class::isInstance)
@@ -79,7 +117,7 @@ public class QueryPlanner {
                     .map(selectOperator -> new ProjectOperator(selectOperator, query.getHead().getTerms().stream()
                             .map(Variable.class::cast)
                             .collect(Collectors.toList())
-                            , selectOperator.getRelationalAtom()))
+                            , selectOperator.getBaseRelationalAtom()))
                     .collect(Collectors.toList());
 
             projectOperators.forEach(ProjectOperator::dump);
@@ -91,7 +129,7 @@ public class QueryPlanner {
         }
     }
 
-    private static List<Operator> constructScans(List<RelationalAtom> relationalAtoms) {
+    private static List<ScanOperator> constructScans(List<RelationalAtom> relationalAtoms) {
         DatabaseCatalog catalog = DatabaseCatalog.getCatalog();
 
         return relationalAtoms.stream()
@@ -106,6 +144,7 @@ public class QueryPlanner {
                 .collect(Collectors.toList());
     }
 
+    //  this can be used to identify whether a comparison atom found in the body of the query can be pushed down right above the leaf of the tree, or if it needs to be used as a join condition
     private static boolean isSingleAtomSelection(ComparisonAtom comparisonAtom, List<ScanOperator> scanOperators) {
         int numVariables = getNumVariablesInComparisonAtom(comparisonAtom);
         if (numVariables == 0 || numVariables == 1) return true;
@@ -115,30 +154,18 @@ public class QueryPlanner {
         }
     }
 
-    private static List<List<Operator>> getRelevantScanOperators(ComparisonAtom comparisonAtom, List<ScanOperator> scanOperators) {
-        int numVariables = getNumVariablesInComparisonAtom(comparisonAtom);
-        if (numVariables == 0) return new ArrayList<>();
-        else if (numVariables == 1) {
-            Variable comparisonAtomVariable = (comparisonAtom.getTerm1() instanceof Variable) ? (Variable) comparisonAtom.getTerm1(): (Variable) comparisonAtom.getTerm2();
-            return scanOperators.stream()
-                    .filter(operator -> operator
-                            .getBaseRelationalAtom()
-                            .getTerms()
-                            .contains(comparisonAtomVariable))
-                    .map(scanOperator -> new ArrayList<Operator>() {{
-                        add(scanOperator);
-                    }})
-                    .collect(Collectors.toList());
-        } else if (numVariables == 2) {
-            Set<Integer> firstVarScanOperatorIndices = IntStream.range(0, scanOperators.size()).filter(i -> scanOperators.get(i).getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm1())).boxed().collect(Collectors.toSet());
+    //  can use this when organising join conditions since the one with that atom as the right atom
+    private static RelationalAtom getLastRelationalAtomUtilisingComparison(ComparisonAtom comparisonAtom, List<ScanOperator> scanOperators) {
+        if (comparisonAtom.getTerm1() instanceof Constant || comparisonAtom.getTerm2() instanceof Constant) throw new IllegalArgumentException("Can only call this function on a comparison atom with two variables!");
+        if (isSingleAtomSelection(comparisonAtom, scanOperators)) throw new UnsupportedOperationException("This function is only relevant for the case where the comparison atom is relevant across multiple relational atoms!");
+        List<ScanOperator> reversedCopy = new ArrayList<>(scanOperators);
+        Collections.reverse(reversedCopy);
 
-            Set<Integer> secondVarScanOperatorIndices = IntStream.range(0, scanOperators.size()).filter(i -> scanOperators.get(i).getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm2())).boxed().collect(Collectors.toSet());
+        Optional<ScanOperator> lastWithEitherVariable = reversedCopy.stream().filter(scanOperator -> (scanOperator.getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm1()) || scanOperator.getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm2()))).findFirst();
 
-            List<List<Operator>> relevantOperatorRanges = new ArrayList<>();
+        if (!lastWithEitherVariable.isPresent()) throw new IllegalArgumentException("The received list of scan operators doesn't contain any of the variables in the comparison atom!");
 
-
-        }
-        else throw new IllegalArgumentException("Somehow more than 2 variables were extracted from a single comparisonAtom?!");
+        return  lastWithEitherVariable.get().getBaseRelationalAtom();
     }
 
     private static int getNumVariablesInComparisonAtom(ComparisonAtom comparisonAtom) {
@@ -149,6 +176,6 @@ public class QueryPlanner {
     }
 
     private static boolean relationalAtomHasOnlyOneTerm(RelationalAtom relationalAtom, Term term1, Term term2) {
-        return (relationalAtom.getTerms().contains(term1) && !relationalAtom.getTerms().contains(term2)) || (!relationalAtom.getTerms().contains(term1) && relationalAtom.getTerms().contains(term2));
+        return (relationalAtom.getTerms().contains(term1) ^ relationalAtom.getTerms().contains(term2));
     }
 }
