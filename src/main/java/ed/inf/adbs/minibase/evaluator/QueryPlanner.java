@@ -38,7 +38,7 @@ public class QueryPlanner {
                 .filter(ComparisonAtom.class::isInstance)
                 .map(ComparisonAtom.class::cast).collect(Collectors.toList());
 
-        List<ComparisonAtom> nonJoinComparisonAtoms = comparisonAtoms.stream().filter(comparisonAtom -> isSingleAtomSelection(comparisonAtom, scanOperators)).collect(Collectors.toList());
+        List<ComparisonAtom> nonJoinComparisonAtoms = comparisonAtoms.stream().filter(comparisonAtom -> isSingleAtomSelection(comparisonAtom, scanOperators) || canBeAppliedAtLeaf(comparisonAtom, scanOperators)).collect(Collectors.toList());
 
         Map<ScanOperator, List<ComparisonAtom>> singleAtomSelectionPredicates = new HashMap<>();
 
@@ -150,7 +150,7 @@ public class QueryPlanner {
         if (numVariables == 0 || numVariables == 1) return true;
 
         else {
-            return relationalAtoms.stream().anyMatch(relationalAtom -> relationalAtomHasOnlyOneTerm(relationalAtom, comparisonAtom.getTerm1(), comparisonAtom.getTerm2()));
+            return relationalAtoms.stream().noneMatch(relationalAtom -> relationalAtomHasOnlyOneTerm(relationalAtom, comparisonAtom.getTerm1(), comparisonAtom.getTerm2()));
         }
     }
 
@@ -160,7 +160,7 @@ public class QueryPlanner {
         if (numVariables == 0 || numVariables == 1) return true;
 
         else {
-            return scanOperators.stream().anyMatch(scanOperator -> relationalAtomHasOnlyOneTerm(scanOperator.getBaseRelationalAtom(), comparisonAtom.getTerm1(), comparisonAtom.getTerm2()));
+            return scanOperators.stream().noneMatch(scanOperator -> relationalAtomHasOnlyOneTerm(scanOperator.getBaseRelationalAtom(), comparisonAtom.getTerm1(), comparisonAtom.getTerm2()));
         }
     }
 
@@ -187,5 +187,13 @@ public class QueryPlanner {
 
     private static boolean relationalAtomHasOnlyOneTerm(RelationalAtom relationalAtom, Term term1, Term term2) {
         return (relationalAtom.getTerms().contains(term1) ^ relationalAtom.getTerms().contains(term2));
+    }
+
+    private static boolean canBeAppliedAtLeaf(ComparisonAtom comparisonAtom, List<ScanOperator> scanOperators) {
+        int numVariables = getNumVariablesInComparisonAtom(comparisonAtom);
+        if (numVariables == 0 || numVariables == 1) return true;
+
+        else
+            return scanOperators.stream().anyMatch(scanOperator -> scanOperator.getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm1()) && scanOperator.getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm2()));
     }
 }

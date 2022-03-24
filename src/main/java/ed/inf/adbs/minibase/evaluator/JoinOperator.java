@@ -1,6 +1,5 @@
 package ed.inf.adbs.minibase.evaluator;
 
-import com.sun.org.apache.bcel.internal.Const;
 import ed.inf.adbs.minibase.base.ComparisonAtom;
 import ed.inf.adbs.minibase.base.Constant;
 import ed.inf.adbs.minibase.base.RelationalAtom;
@@ -105,8 +104,8 @@ public class JoinOperator extends Operator {
     }
 
     private static ComparisonAtom getVariableSubsInComparisonAtomTwoSides(ComparisonAtom baseComparisonAtom, Tuple leftTuple, Tuple rightTuple, List<RelationalAtom> leftChildAtoms, RelationalAtom rightChildAtom) {
-        Constant term1Sub = null;
-        Constant term2Sub = null;
+        Constant term1Sub;
+        Constant term2Sub;
 
         if (baseComparisonAtom.getTerm1() instanceof Variable) {
             List<Constant> leftTerm1Subs = EvaluationUtils.getSubsForAllInstancesOfVariableInCombinedTuple(leftChildAtoms, leftTuple, (Variable) baseComparisonAtom.getTerm1());
@@ -147,10 +146,10 @@ public class JoinOperator extends Operator {
                     throw new IllegalArgumentException("No valid term subs found in either expression for term 1 variable!");
 
                 else {
-                    term1Sub = leftTerm2Subs.get(0);
+                    term2Sub = leftTerm2Subs.get(0);
                 }
             } else {
-                term1Sub = rightTerm2Sub;
+                term2Sub = rightTerm2Sub;
             }
         } else {
             term2Sub = (Constant) baseComparisonAtom.getTerm2();
