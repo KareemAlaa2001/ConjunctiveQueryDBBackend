@@ -2,6 +2,7 @@ package ed.inf.adbs.minibase.evaluator;
 
 import ed.inf.adbs.minibase.base.*;
 import ed.inf.adbs.minibase.dbstructures.DatabaseCatalog;
+import ed.inf.adbs.minibase.dbstructures.Relation;
 import ed.inf.adbs.minibase.parser.QueryParser;
 
 import java.io.FileNotFoundException;
@@ -142,6 +143,15 @@ public class QueryPlanner {
                     }
                 })
                 .collect(Collectors.toList());
+    }
+
+    public static boolean isSingleAtomSelectionInRelationalAtoms(ComparisonAtom comparisonAtom, List<RelationalAtom> relationalAtoms) {
+        int numVariables = getNumVariablesInComparisonAtom(comparisonAtom);
+        if (numVariables == 0 || numVariables == 1) return true;
+
+        else {
+            return relationalAtoms.stream().anyMatch(relationalAtom -> relationalAtomHasOnlyOneTerm(relationalAtom, comparisonAtom.getTerm1(), comparisonAtom.getTerm2()));
+        }
     }
 
     //  this can be used to identify whether a comparison atom found in the body of the query can be pushed down right above the leaf of the tree, or if it needs to be used as a join condition
