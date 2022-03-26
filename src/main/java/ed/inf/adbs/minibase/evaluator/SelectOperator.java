@@ -21,7 +21,6 @@ public class SelectOperator extends Operator {
         this.child = child;
         this.baseRelationalAtom = baseRelationalAtom;
         this.selectionPredicates = selectionPredicates;
-
     }
 
     @Override

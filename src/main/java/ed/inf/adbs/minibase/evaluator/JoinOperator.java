@@ -19,48 +19,49 @@ public class JoinOperator extends Operator {
     RelationalAtom rightChildAtom;
     List<ComparisonAtom> joinConditions;
 
+    Tuple outerTuple;
+    Tuple innerTuple;
+
     public JoinOperator(Operator leftChild, Operator rightChild, List<RelationalAtom> leftChildAtoms, RelationalAtom rightChildAtom, List<ComparisonAtom> joinConditions) {
         this.leftChild = leftChild;
         this.rightChild = rightChild;
         this.leftChildAtoms = leftChildAtoms;
         this.rightChildAtom = rightChildAtom;
         this.joinConditions = joinConditions;
-
-        System.out.println("Creating new Join Operator with the following params:");
-        System.out.println("leftChild: " + leftChild);
-        System.out.println("Right child: " + rightChild);
-        System.out.println("leftChildAtoms: " + leftChildAtoms);
-        System.out.println("rightChildAtom: " + rightChildAtom);
-        System.out.println("joinConditions: " + joinConditions);
+        this.innerTuple = null;
+        this.outerTuple = null;
     }
 
     @Override
     public Tuple getNextTuple() throws IOException {
 
-        Tuple nextTuple = null;
+        if (outerTuple != null && innerTuple != null) {
 
-        Tuple innerTuple;
-        Tuple outerTuple;
+            while ((innerTuple = rightChild.getNextTuple()) != null) {
 
-        boolean matchFound = false;
+                if (passesSelectionPredicatesMultipleRelations(outerTuple, innerTuple, this.leftChildAtoms, this.rightChildAtom, this.joinConditions)) {
+                    List<Constant> combinedTerms = new ArrayList<>(outerTuple.getFields());
+                    combinedTerms.addAll(innerTuple.getFields());
+                    return new Tuple(combinedTerms);
+                }
+            }
+        }
+
 
         while ((outerTuple = leftChild.getNextTuple()) != null) {
             rightChild.reset();
 
             while ((innerTuple = rightChild.getNextTuple()) != null) {
+
                 if (passesSelectionPredicatesMultipleRelations(outerTuple, innerTuple, this.leftChildAtoms, this.rightChildAtom, this.joinConditions)) {
                     List<Constant> combinedTerms = new ArrayList<>(outerTuple.getFields());
                     combinedTerms.addAll(innerTuple.getFields());
-                    nextTuple = new Tuple(combinedTerms);
-                    matchFound = true;
-                    break;
+                    return new Tuple(combinedTerms);
                 }
             }
-
-            if (matchFound) break;
         }
 
-        return nextTuple;
+        return null;
     }
 
     @Override

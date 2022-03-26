@@ -15,27 +15,31 @@ import java.util.stream.Collectors;
 public class ProjectOperator extends Operator {
 
     private Operator child;
+
     private List<Variable> outputVariables;
     private RelationalAtom baseRelationalAtom;
+
     private List<RelationalAtom> relationalAtomList;
-    private final boolean projectionNeeded;
     private Set<Tuple> tuplesOutputSoFar;
 
     public ProjectOperator(Operator child, List<Variable> outputVariables, RelationalAtom baseRelationalAtom) {
         if (!baseRelationalAtom.getTerms().containsAll(outputVariables)) throw new IllegalArgumentException("Attempting to project out to a variable that doesnt exit in the input!!");
+
         this.child = child;
         this.outputVariables = outputVariables;
         this.baseRelationalAtom = baseRelationalAtom;
-        this.projectionNeeded = getTotalNumTerms() != outputVariables.size();
+
         this.tuplesOutputSoFar = new HashSet<>();
     }
 
     public ProjectOperator(Operator child, List<Variable> outputVariables, List<RelationalAtom> childRelationalAtoms) {
-        if (!childRelationalAtoms.stream().flatMap(relationalAtom -> relationalAtom.getTerms().stream()).collect(Collectors.toList()).containsAll(outputVariables)) throw new IllegalArgumentException("Attempting to project out to a variable that doesnt exit in the input!!");
+        if (!childRelationalAtoms.stream().flatMap(relationalAtom -> relationalAtom.getTerms().stream()).collect(Collectors.toList()).containsAll(outputVariables))
+            throw new IllegalArgumentException("Attempting to project out to a variable that doesnt exit in the input!!");
+
         this.child = child;
         this.outputVariables = outputVariables;
         this.relationalAtomList = childRelationalAtoms;
-        this.projectionNeeded = getTotalNumTerms() != outputVariables.size();
+
         this.tuplesOutputSoFar = new HashSet<>();
     }
 
@@ -97,7 +101,8 @@ public class ProjectOperator extends Operator {
     }
 
     private void assertEitherBaseRelationalAtomOrRelationalAtomListInitialized() {
-        if (this.baseRelationalAtom == null && this.relationalAtomList == null) throw new UnsupportedOperationException("Either the base relational atom or the relational atom list has to be non-null for this to be callable!");
+        if (this.baseRelationalAtom == null && this.relationalAtomList == null)
+            throw new UnsupportedOperationException("Either the base relational atom or the relational atom list has to be non-null for this to be callable!");
     }
 
     public Operator getChild() {
