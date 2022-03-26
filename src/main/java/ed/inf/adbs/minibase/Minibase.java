@@ -30,7 +30,14 @@ public class Minibase {
             DatabaseCatalog catalog = DatabaseCatalog.getCatalog();
             catalog.constructRelations(databaseDir);
 
-            QueryPlanner.evaluateCQ(databaseDir, inputFile, outputFile);
+            Query baseQuery = QueryParser.parse(Paths.get(inputFile));
+
+            QueryPlanner planner = new QueryPlanner(baseQuery);
+
+//            QueryPlanner.evaluateCQ(databaseDir, inputFile, outputFile);
+            OutputWriter.initialiseOutputWriter(outputFile);
+
+            planner.getRoot().dump();
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }

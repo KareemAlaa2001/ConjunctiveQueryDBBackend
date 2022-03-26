@@ -25,6 +25,13 @@ public class JoinOperator extends Operator {
         this.leftChildAtoms = leftChildAtoms;
         this.rightChildAtom = rightChildAtom;
         this.joinConditions = joinConditions;
+
+        System.out.println("Creating new Join Operator with the following params:");
+        System.out.println("leftChild: " + leftChild);
+        System.out.println("Right child: " + rightChild);
+        System.out.println("leftChildAtoms: " + leftChildAtoms);
+        System.out.println("rightChildAtom: " + rightChildAtom);
+        System.out.println("joinConditions: " + joinConditions);
     }
 
     @Override

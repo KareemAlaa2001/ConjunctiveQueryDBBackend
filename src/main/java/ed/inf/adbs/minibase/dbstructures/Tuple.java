@@ -4,6 +4,7 @@ import ed.inf.adbs.minibase.base.Constant;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class Tuple {
     private List<Constant> fields;
@@ -22,7 +23,7 @@ public class Tuple {
 
     @Override
     public String toString() {
-        return "Tuple: " + this.fields.toString();
+        return this.fields.stream().map(Constant::toString).collect(Collectors.joining(","));
     }
 
     @Override

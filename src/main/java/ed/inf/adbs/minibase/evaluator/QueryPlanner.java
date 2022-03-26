@@ -2,12 +2,8 @@ package ed.inf.adbs.minibase.evaluator;
 
 import ed.inf.adbs.minibase.base.*;
 import ed.inf.adbs.minibase.dbstructures.DatabaseCatalog;
-import ed.inf.adbs.minibase.dbstructures.Relation;
-import ed.inf.adbs.minibase.parser.QueryParser;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,6 +13,7 @@ public class QueryPlanner {
 
     public QueryPlanner(Query inputQuery) {
         this.inputQuery = inputQuery;
+        constructQueryTree();
     }
 
     /**
@@ -61,13 +58,77 @@ public class QueryPlanner {
                         : scanOperator)
                 .collect(Collectors.toList());
 
+        //  if this is a single atom query, then we want to just go straight to the projection
+        if (childrenOfJoins.size() == 1) {
+            Operator childOperator = childrenOfJoins.get(0);
+
+            ProjectOperator projectOperator;
+
+            RelationalAtom relationalAtom = getRelationalAtomFromSelectOrScanOperator(childOperator);
+
+            this.root =  new ProjectOperator(childOperator, query
+                    .getHead()
+                    .getTerms()
+                    .stream()
+                    .map(Variable.class::cast)
+                    .collect(Collectors.toList())
+                    , relationalAtom);
+
+            return;
+        }
+
         //  next step is to construct a join tree using these. need to identify where join conditions lie and organise them accordingly
         //  can assume that maybe the variables with the same name in the expression have been remapped and extracted to relevant copies? nah that's dumb.
 
         List<ComparisonAtom> joinConditions = comparisonAtoms.stream().filter(comparisonAtom -> !isSingleAtomSelection(comparisonAtom, scanOperators)).collect(Collectors.toList());
 
+        //  next step is to construct a join tree using childrenOfJoins
+        //  we know here that there are at least 2 children in the list.
+
+        Operator firstOperator = childrenOfJoins.remove(0);
+        Operator secondOperator = childrenOfJoins.remove(0);
+
+        Map<RelationalAtom, List<ComparisonAtom>> joinConditionMap = joinConditions.stream().collect(Collectors.groupingBy(comparisonAtom -> getLastRelationalAtomUtilisingComparison(comparisonAtom, scanOperators)));
+
+        List<RelationalAtom> leftRelationalAtoms = new ArrayList<RelationalAtom>() {{
+            add(getRelationalAtomFromSelectOrScanOperator(firstOperator));
+        }};
+
+        RelationalAtom rightRelationalAtom =  getRelationalAtomFromSelectOrScanOperator(secondOperator);
 
 
+        JoinOperator currentLeftChild = new JoinOperator(firstOperator, secondOperator, new ArrayList<>(leftRelationalAtoms), rightRelationalAtom, joinConditionMap.getOrDefault(rightRelationalAtom, new ArrayList<>()));
+
+        leftRelationalAtoms.add(rightRelationalAtom);
+
+        while (!childrenOfJoins.isEmpty()) {
+            Operator rightChild = childrenOfJoins.remove(0);
+
+            rightRelationalAtom = getRelationalAtomFromSelectOrScanOperator(rightChild);
+
+//            System.out.println("Do we get here before the exception call?");
+
+            currentLeftChild = new JoinOperator(currentLeftChild, rightChild, new ArrayList<>(leftRelationalAtoms), rightRelationalAtom, joinConditionMap.getOrDefault(rightRelationalAtom, new ArrayList<>()));
+
+            //            System.out.println("added join operator" + currentLeftChild);
+            leftRelationalAtoms.add(rightRelationalAtom);
+        }
+
+        this.root = new ProjectOperator(currentLeftChild,
+                query.getHead()
+                .getTerms()
+                .stream()
+                .map(Variable.class::cast)
+                .collect(Collectors.toList()), leftRelationalAtoms);
+
+    }
+
+    private static RelationalAtom getRelationalAtomFromSelectOrScanOperator(Operator selectOrScan) {
+        if (selectOrScan instanceof SelectOperator) {
+            return ((SelectOperator) selectOrScan).getBaseRelationalAtom();
+        } else if (selectOrScan instanceof ScanOperator) {
+            return ((ScanOperator) selectOrScan).getBaseRelationalAtom();
+        } else throw new IllegalArgumentException("Invalid operator type passed in here!!");
     }
 
     public static Set<ScanOperator> getRelevantScanOperators(ComparisonAtom comparisonAtom, List<ScanOperator> scanOperators) {
@@ -81,54 +142,53 @@ public class QueryPlanner {
                 .collect(Collectors.toSet());
     }
 
-    //  TODO refactor this to construct a tree with one root operator (projection if present) and form the selection positions for the joins
-    public static void evaluateCQ(String databaseDir, String inputFile, String outputFile) {
-        try {
-            Query baseQuery = QueryParser.parse(Paths.get(inputFile));
-
-            Query query = EvaluationUtils.extractConstantsToComparisonAtomsFromRelationalAtomBodies(baseQuery);
-
-            //  first implementing the construction of scn operators for each of the relations
-            List<RelationalAtom> relationalAtoms = query.getBody().stream()
-                    .filter(RelationalAtom.class::isInstance)
-                    .map(RelationalAtom.class::cast).collect(Collectors.toList());
-
-            if (relationalAtoms.size() > 1) throw new UnsupportedOperationException("No support for embedded joins in this function!");
-
-            DatabaseCatalog catalog = DatabaseCatalog.getCatalog();
-
-            catalog.constructRelations(databaseDir);
-
-            List<ScanOperator> scanOperators = constructScans(relationalAtoms);
-
-            List<ComparisonAtom> comparisonAtoms = query.getBody().stream()
-                    .filter(ComparisonAtom.class::isInstance)
-                    .map(ComparisonAtom.class::cast).collect(Collectors.toList());
-
-
-            // starting with a naive select-scan which sets up a scan for each relationalAtom, then sets a selection operator as a parent for each, calling the selection dump
-            List<SelectOperator> selectOperators = scanOperators.stream()
-                    .map(ScanOperator.class::cast)
-                    .map(scanOperator -> new SelectOperator(scanOperator, scanOperator.getBaseRelationalAtom(), comparisonAtoms.stream()
-                            .filter(comparisonAtom -> SelectOperator.relationalAtomContainsPredicateVariables(scanOperator.getBaseRelationalAtom(),comparisonAtom))
-                            .collect(Collectors.toList())))
-                    .collect(Collectors.toList());
-
-            List<ProjectOperator> projectOperators = selectOperators.stream()
-                    .map(selectOperator -> new ProjectOperator(selectOperator, query.getHead().getTerms().stream()
-                            .map(Variable.class::cast)
-                            .collect(Collectors.toList())
-                            , selectOperator.getBaseRelationalAtom()))
-                    .collect(Collectors.toList());
-
-            projectOperators.forEach(ProjectOperator::dump);
-
-
-
-        } catch (IOException ioe) {
-            ioe.printStackTrace();
-        }
-    }
+//    public static void evaluateCQ(String databaseDir, String inputFile, String outputFile) {
+//        try {
+//            Query baseQuery = QueryParser.parse(Paths.get(inputFile));
+//
+//            Query query = EvaluationUtils.extractConstantsToComparisonAtomsFromRelationalAtomBodies(baseQuery);
+//
+//            //  first implementing the construction of scn operators for each of the relations
+//            List<RelationalAtom> relationalAtoms = query.getBody().stream()
+//                    .filter(RelationalAtom.class::isInstance)
+//                    .map(RelationalAtom.class::cast).collect(Collectors.toList());
+//
+//            if (relationalAtoms.size() > 1) throw new UnsupportedOperationException("No support for embedded joins in this function!");
+//
+//            DatabaseCatalog catalog = DatabaseCatalog.getCatalog();
+//
+//            catalog.constructRelations(databaseDir);
+//
+//            List<ScanOperator> scanOperators = constructScans(relationalAtoms);
+//
+//            List<ComparisonAtom> comparisonAtoms = query.getBody().stream()
+//                    .filter(ComparisonAtom.class::isInstance)
+//                    .map(ComparisonAtom.class::cast).collect(Collectors.toList());
+//
+//
+//            // starting with a naive select-scan which sets up a scan for each relationalAtom, then sets a selection operator as a parent for each, calling the selection dump
+//            List<SelectOperator> selectOperators = scanOperators.stream()
+//                    .map(ScanOperator.class::cast)
+//                    .map(scanOperator -> new SelectOperator(scanOperator, scanOperator.getBaseRelationalAtom(), comparisonAtoms.stream()
+//                            .filter(comparisonAtom -> SelectOperator.relationalAtomContainsPredicateVariables(scanOperator.getBaseRelationalAtom(),comparisonAtom))
+//                            .collect(Collectors.toList())))
+//                    .collect(Collectors.toList());
+//
+//            List<ProjectOperator> projectOperators = selectOperators.stream()
+//                    .map(selectOperator -> new ProjectOperator(selectOperator, query.getHead().getTerms().stream()
+//                            .map(Variable.class::cast)
+//                            .collect(Collectors.toList())
+//                            , selectOperator.getBaseRelationalAtom()))
+//                    .collect(Collectors.toList());
+//
+//            projectOperators.forEach(ProjectOperator::dump);
+//
+//
+//
+//        } catch (IOException ioe) {
+//            ioe.printStackTrace();
+//        }
+//    }
 
     private static List<ScanOperator> constructScans(List<RelationalAtom> relationalAtoms) {
         DatabaseCatalog catalog = DatabaseCatalog.getCatalog();
@@ -195,5 +255,21 @@ public class QueryPlanner {
 
         else
             return scanOperators.stream().anyMatch(scanOperator -> scanOperator.getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm1()) && scanOperator.getBaseRelationalAtom().getTerms().contains(comparisonAtom.getTerm2()));
+    }
+
+    public Operator getRoot() {
+        return root;
+    }
+
+    public void setRoot(Operator root) {
+        this.root = root;
+    }
+
+    public Query getInputQuery() {
+        return inputQuery;
+    }
+
+    public void setInputQuery(Query inputQuery) {
+        this.inputQuery = inputQuery;
     }
 }
