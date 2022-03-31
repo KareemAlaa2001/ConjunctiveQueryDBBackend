@@ -21,3 +21,5 @@ This is runnable from the `Minibase` class in `src/main/java/ed/inf/adbs/minibas
 
 It assumes that the db directory contains a file `schema.txt` defining the schema of the database and a `files` directory which contains a csv file for each relation outlined in the schema given the same name as that of the relation.
 
+The logic for extracting the join conditions is outlined in the comments in the `QueryParser` class. 
+
