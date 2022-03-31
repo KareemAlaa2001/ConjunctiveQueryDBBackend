@@ -15,6 +15,8 @@ package ed.inf.adbs.minibase;
 
 public class CQMinimizerTests {
 
+    //  comprehenssive test that iterates all of the example queries in the input folder and compares the output minimised queries with the respective files in expected_outputs
+    //  code taken from the Piazza post https://piazza.com/class/kyecz2qnmvr5bu?cid=74
     @Test
     public void queries() throws IOException {
         String basePath = "data/minimization/";
@@ -27,7 +29,6 @@ public class CQMinimizerTests {
 
         for (File inputFile: inputFiles) {
             String queryFilename = inputFile.getName();
-            System.out.println(queryFilename);
 
             File expectedFile = new File(basePath + expectedFolder + queryFilename);
             File calculatedFile = new File(basePath + actualFolder + queryFilename);
@@ -45,7 +46,6 @@ public class CQMinimizerTests {
                     stream().map(Object::toString).collect(Collectors.toList());
             Collections.sort(expectedQueryBodyStrList);
             Collections.sort(calculatedQueryBodyStrList);
-            System.out.println("input query: " + inputFile);
             Assert.assertEquals(expectedQueryBodyStrList, calculatedQueryBodyStrList);
         }
     }

@@ -5,6 +5,8 @@ import ed.inf.adbs.minibase.Utils;
 import java.util.List;
 import java.util.Objects;
 
+//  A class for representing relational atoms in a query.
+//  Each has an associated name and list of terms. Contains implementations for toString, equals and hashCode for outputting, equality checks and use in Sets respectively
 public class RelationalAtom extends Atom {
     private String name;
 

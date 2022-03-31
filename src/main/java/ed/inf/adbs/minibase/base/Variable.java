@@ -2,6 +2,7 @@ package ed.inf.adbs.minibase.base;
 
 import java.util.Objects;
 
+//  the Variable class, which extends basc terms by adding a name and having an equals and hashcode that check over the value of this name as well as the classname
 public class Variable extends Term {
     private String name;
 

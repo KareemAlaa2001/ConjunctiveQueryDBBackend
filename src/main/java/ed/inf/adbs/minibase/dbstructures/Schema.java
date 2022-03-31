@@ -4,6 +4,7 @@ import ed.inf.adbs.minibase.base.Constant;
 
 import java.util.List;
 
+//  maintains a relation's schema by keeping track of the relation name and the column's types
 public class Schema {
 
     String name;

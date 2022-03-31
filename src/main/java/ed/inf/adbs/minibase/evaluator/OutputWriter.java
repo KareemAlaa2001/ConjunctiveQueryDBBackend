@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Paths;
 
+//  singleton filewriter that handles writing to the output file.
 public class OutputWriter {
 
     private static FileWriter fileWriter;

@@ -2,6 +2,7 @@ package ed.inf.adbs.minibase.base;
 
 import java.util.Objects;
 
+//  Represents ComparisonAtoms, which encode a boolean predicate between two terms
 public class ComparisonAtom extends Atom {
 
     private Term term1;
@@ -33,6 +34,7 @@ public class ComparisonAtom extends Atom {
         return term1 + " " + op + " " + term2;
     }
 
+
     private int evaluateConstantComparison(Constant constant1, Constant constant2) {
         if (!constant1.getClass().equals(constant2.getClass())) throw new IllegalArgumentException("Incompatible constant types passed in!");
 
@@ -63,6 +65,8 @@ public class ComparisonAtom extends Atom {
         }
     }
 
+    //  public method which evaluates the predicate encoded by this comparison atom and returns whether it is true. It is only callable when both terms are constants rather than variables
+    //  variables are expected to have been replaced with the relevant constants before this call is made.
     public boolean evaluateComparison() {
         if (this.term1 instanceof Variable || this.term2 instanceof Variable) throw new UnsupportedOperationException("Can't invoke this on the current atom unless both terms are constants!");
 

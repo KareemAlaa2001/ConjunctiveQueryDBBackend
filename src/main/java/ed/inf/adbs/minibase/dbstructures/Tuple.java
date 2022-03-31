@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+//  class representing tuples, which contain a list of constants as its "fields"
 public class Tuple {
     private List<Constant> fields;
 

@@ -22,7 +22,7 @@ public class Minibase {
             return;
         }
 
-        String databaseDir = args[0];
+        String databaseDir = args[0] + "/";
         String inputFile = args[1];
         String outputFile = args[2];
 

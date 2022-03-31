@@ -4,6 +4,7 @@ import ed.inf.adbs.minibase.Utils;
 
 import java.util.List;
 
+//  Represents conjunctive queries. Each query has a relational atom as a head and a list of atoms as its body
 public class Query {
     private RelationalAtom head;
 

@@ -2,6 +2,7 @@ package ed.inf.adbs.minibase.base;
 
 import java.util.Objects;
 
+//  a class to represent integer constants in queries and tuples, has implementations of toString, equals, hashCode and compareTo which utilise the value of the integer
 public class IntegerConstant extends Constant implements Comparable<IntegerConstant> {
 
     private Integer value;

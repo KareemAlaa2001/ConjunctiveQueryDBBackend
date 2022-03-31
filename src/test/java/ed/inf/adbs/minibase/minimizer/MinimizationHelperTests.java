@@ -31,7 +31,6 @@ public class MinimizationHelperTests {
         correctResultQuery.add(new RelationalAtom("ENROLLMENT", Arrays.asList(new Variable("sid"), new StringConstant("ADBS"))));
 
         Set<RelationalAtom> mappingResult = MinimizationHelpers.getHomomorphismMappingResult(new Variable("cid"), new StringConstant("ADBS"),baseQuery);
-        System.out.println(mappingResult);
         assertEquals(mappingResult, correctResultQuery);
     }
 
@@ -40,12 +39,8 @@ public class MinimizationHelperTests {
         Set<RelationalAtom> baseQuery = query14.getBody().stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
         Set<RelationalAtom> targetQuery = QueryParser.parse("STUDENTNAME(name) :- ENROLLMENT(sid, 'ADBS'), GRADE('ADBS', x, 'MMXXII', g), STUDENT(sid, name, 'INF'), GRADE('ADBS', uid, semester, mark)").getBody().stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
 
-        System.out.println(baseQuery);
 
         Set<RelationalAtom> mappingResult = MinimizationHelpers.getHomomorphismMappingResult(new Variable("cid"), new StringConstant("ADBS"),baseQuery);
-
-        System.out.println(targetQuery);
-        System.out.println(mappingResult);
 
         assertEquals(targetQuery, mappingResult);
 
@@ -74,23 +69,6 @@ public class MinimizationHelperTests {
         Set<RelationalAtom> baseQuery = query14.getBody().stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
         Set<RelationalAtom> targetQuery = new HashSet<>(baseQuery);
         assertTrue(MinimizationHelpers.queryBodiesEquivalent(baseQuery, targetQuery));
-    }
-
-    @Test
-    public void test_queryBodiesEquivalent_diffVarname() {
-        Set<RelationalAtom> baseQuery = query14.getBody().stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
-        Set<RelationalAtom> targetQuery = MinimizationHelpers.getHomomorphismMappingResult(new Variable("cid"), new Variable("sid"), baseQuery);
-
-        System.out.println(baseQuery);
-        System.out.println(targetQuery);
-        assertTrue(MinimizationHelpers.queryBodiesEquivalent(baseQuery,targetQuery));
-    }
-
-    public void test_queryBodiesEquivalent_anotherCase() {
-        Query test = QueryParser.parse("Q(x) :- R(w, 5, v), R(w, 5, z), R(x, 5, u)");
-        Set<RelationalAtom> baseQuery = test.getBody().stream().map(RelationalAtom.class::cast).collect(Collectors.toSet());
-        Set<RelationalAtom> targetQuery = MinimizationHelpers.getHomomorphismMappingResult(new Variable("w"), new Variable("sid"), baseQuery);
-
     }
 
 }

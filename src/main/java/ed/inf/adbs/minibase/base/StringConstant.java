@@ -2,6 +2,7 @@ package ed.inf.adbs.minibase.base;
 
 import java.util.Objects;
 
+//  a class to represent String constants in queries and tuples, has implementations of toString, equals, hashCode and compareTo which utilise the value of the string
 public class StringConstant extends Constant implements Comparable<StringConstant>  {
     private String value;
 

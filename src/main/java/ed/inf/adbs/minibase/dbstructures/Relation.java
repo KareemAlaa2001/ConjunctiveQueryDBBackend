@@ -1,5 +1,6 @@
 package ed.inf.adbs.minibase.dbstructures;
 
+//  maintains a relation's name, schema and file location
 public class Relation {
 
     private String name;

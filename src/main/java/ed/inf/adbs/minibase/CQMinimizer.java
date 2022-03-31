@@ -32,19 +32,17 @@ public class CQMinimizer {
     /**
      * CQ minimization procedure
      *
+     * CQ minimisation method modifies the referenced instance of the query, which is then output to a file
      * Assume the body of the query from inputFile has no comparison atoms
-     * but could potentially have constants in its relational atoms.
+     * but could have constants in its relational atoms.
      *
      */
     public static void minimizeCQ(String inputFile, String outputFile) {
         try {
             Query query = QueryParser.parse(Paths.get(inputFile));
 
-            System.out.println("Input query: " + query);
-
             MinimizationHelpers.executeMinimizeCQBody(query);
 
-            System.out.println("Output query: " + query);
             Utils.outputQueryToFile(query, outputFile);
 
 

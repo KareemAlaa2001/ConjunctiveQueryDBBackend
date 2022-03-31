@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+//  JoinOperator that implements a tuple nested loop join over tuples coming from left and right child operators
 public class JoinOperator extends Operator {
 
     Operator leftChild;
@@ -32,6 +33,15 @@ public class JoinOperator extends Operator {
         this.outerTuple = null;
     }
 
+    //
+    /**
+     * returns the next tuple that passes the join conditions and other equality checks from the current nested loop iterating over the tuples from the children
+     * if the current outer tuple and current inner tuple have already been initialised, it first runs through the remaining inner tuples before getting the next outer tuple
+     * to find matches, it iterates over the tuples in the left child, where for each tuple it resets the right child then iterates through all its tuples until finding a match that passes all of the predicates
+     *
+     * @return the next tuple matching the predicates, null if none such exist
+     * @throws IOException
+     */
     @Override
     public Tuple getNextTuple() throws IOException {
 
@@ -70,13 +80,18 @@ public class JoinOperator extends Operator {
         rightChild.reset();
     }
 
+    /**
+     * First checks that the constants in the positions corresponding to all respective occurrences of all the variables in the right child atom across the tuples being joined are equal.
+     * Then checks that the combination of the left and tuples as well as the corresponding relational atoms pass all of the join condition comparison atom predicates
+     *
+     * @param leftTuple the left tuple resultant from combining tuples based off the left child relational atoms list
+     * @param rightTuple the right tuple coming from the right relational atom
+     * @param leftChildAtoms the list of relational atoms that form up the left tuple
+     * @param rightChildAtom the relational atom corresponding to the right tuple
+     * @param joinConditions the list of explicit join conditions
+     * @return boolean representing whether this combination of tuples passes the above checks
+     */
     public static boolean passesSelectionPredicatesMultipleRelations(Tuple leftTuple, Tuple rightTuple, List<RelationalAtom> leftChildAtoms, RelationalAtom rightChildAtom, List<ComparisonAtom> joinConditions) {
-        //  first extract the list of equalities in the relational atoms that are being checked over
-        //  (where there are variables of the same name..
-        //  Actually now that im thinking about it its probably a good idea to do a
-        //  veryh similar evaluationutil based approach to the one in the other class
-
-        // lmao can jsut do a conjunction here that all the selection predicates are passed but then also that the positions with the same variable name are equal!
 
         boolean sameNameVariableSlotsInTuplesNotEqual = rightChildAtom.getTerms().stream().anyMatch(term -> {
             if (term instanceof Constant)
@@ -95,9 +110,8 @@ public class JoinOperator extends Operator {
 
     /**
      *  given a left tuple (which could come from a varying number of relational atoms) and a right tuple (which comes from 1 relational atom),
-     *  evaluate the given ComparisonAtom on the combination of those tuples. Should we be accepting single relationalAtom predicates here? (nahh, that should have been handled earlier i think)
-      */
-
+     *  evaluate the given ComparisonAtom on the combination of those tuples.
+     */
     private static boolean passesMultiAtomPredicate(Tuple leftTuple, Tuple rightTuple, ComparisonAtom comparisonAtom, List<RelationalAtom> leftChildAtoms, RelationalAtom rightChildAtom) {
         if (QueryPlanner.isSingleAtomSelectionInRelationalAtoms(comparisonAtom, leftChildAtoms))
             throw new IllegalArgumentException(
@@ -111,6 +125,16 @@ public class JoinOperator extends Operator {
         return variablesSubstitutedFromEitherSide.evaluateComparison();
     }
 
+    /**
+     * Given a base comparison atom with embedded variables as input, subsitutes the variables with their corresponding values across the tuples
+     *
+     * @param baseComparisonAtom the original comparison atom
+     * @param leftTuple the left tuple, formed from the combination of tuples corresponding to the left relational atoms
+     * @param rightTuple the right tuple mapped over by the right relational atom
+     * @param leftChildAtoms the list of relational atoms forming the query representation of the left tuple
+     * @param rightChildAtom the query representation of the right tuple
+     * @return the comparison atom with the variables substituted for Constants accordingly
+     */
     private static ComparisonAtom getVariableSubsInComparisonAtomTwoSides(ComparisonAtom baseComparisonAtom, Tuple leftTuple, Tuple rightTuple, List<RelationalAtom> leftChildAtoms, RelationalAtom rightChildAtom) {
         Constant term1Sub;
         Constant term2Sub;
